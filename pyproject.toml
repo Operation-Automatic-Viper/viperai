@@ -1,0 +1,31 @@
+[project]
+name = "viperai"
+version = "1.0.0"
+description = "a simple pentesting AI Agent"
+authors = [
+    {name = "Rayen Guedria",email = "rayenguedria12@gmail.com"}
+]
+maintainers = [
+    {name = "Rayen Guedria",email = "rayenguedria12@gmail.com"}
+]
+license-files = [
+    "*-LICENSE",
+    "CONTRIBUTORS",
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+]
+
+[tool.poetry]
+packages = [{include = "viperai", from = "src"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[project.urls]
+
+repository = "https://github.com/python-poetry/poetry"
+[project.optional-dependencies]
+mysql = [ "mysqlclient>=1.3,<2.0" ]
