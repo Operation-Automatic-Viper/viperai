@@ -1,0 +1,46 @@
+{
+  "session_id": "20251118_214918",
+  "target": "google.com",
+  "start_time": "2025-11-18T21:49:18.035257",
+  "steps": [
+    {
+      "step_id": 1,
+      "action": "Enumerate subdomains for google.com to identify potential attack surface.",
+      "tool": "sublistah",
+      "result": {
+        "success": false,
+        "error": "[Errno 2] No such file or directory: 'sublistah.sh'"
+      },
+      "timestamp": "2025-11-18T21:49:18.038890"
+    },
+    {
+      "step_id": 2,
+      "action": "Fetch HTTP headers and content for each identified subdomain to gather information about server software, versions, and potential vulnerabilities.",
+      "tool": "curl",
+      "result": {
+        "success": true,
+        "tool": "curl",
+        "domain": "google.com",
+        "raw_file": "/home/rayen/viperai/src/viperai/output/curl_google.com.txt",
+        "status": "301",
+        "server": "gws",
+        "headers": {
+          "status": "301",
+          "location": "https://www.google.com/",
+          "content-type": "text/html; charset=UTF-8",
+          "content-security-policy-report-only": "object-src 'none';base-uri 'self';script-src 'nonce-JnoD-tvGdagTeJE4St_lPw' 'strict-dynamic' 'report-sample' 'unsafe-eval' 'unsafe-inline' https: http:;report-uri https://csp.withgoogle.com/csp/gws/other-hp",
+          "date": "Tue, 18 Nov 2025 20:49:22 GMT",
+          "expires": "Thu, 18 Dec 2025 20:49:22 GMT",
+          "cache-control": "public, max-age=2592000",
+          "server": "gws",
+          "content-length": "220",
+          "x-xss-protection": "0",
+          "x-frame-options": "SAMEORIGIN",
+          "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+          "curl": "(28) Connection timed out after 3921 milliseconds"
+        }
+      },
+      "timestamp": "2025-11-18T21:49:28.190919"
+    }
+  ]
+}

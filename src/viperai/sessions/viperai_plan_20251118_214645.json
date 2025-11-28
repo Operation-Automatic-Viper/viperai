@@ -1,0 +1,24 @@
+{
+  "steps": [
+    {
+      "id": 1,
+      "action": "Enumerate subdomains for google.com using sublistah.",
+      "tool_suggestions": [
+        "sublistah"
+      ],
+      "chosen_tool": "sublistah",
+      "status": "pending"
+    },
+    {
+      "id": 2,
+      "action": "Retrieve HTTP headers for each found subdomain to identify server software and versions.",
+      "tool_suggestions": [
+        "curl"
+      ],
+      "chosen_tool": "curl",
+      "status": "pending"
+    }
+  ],
+  "target": "google.com",
+  "session_id": "temp"
+}

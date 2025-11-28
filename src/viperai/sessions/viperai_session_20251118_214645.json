@@ -1,0 +1,32 @@
+{
+  "session_id": "20251118_214645",
+  "target": "google.com",
+  "start_time": "2025-11-18T21:46:45.693593",
+  "steps": [
+    {
+      "step_id": 1,
+      "action": "Enumerate subdomains for google.com using sublistah.",
+      "tool": "sublistah",
+      "result": {
+        "success": false,
+        "error": "sublistah.sh not in PATH"
+      },
+      "timestamp": "2025-11-18T21:46:45.696728"
+    },
+    {
+      "step_id": 2,
+      "action": "Retrieve HTTP headers for each found subdomain to identify server software and versions.",
+      "tool": "curl",
+      "result": {
+        "success": true,
+        "tool": "curl",
+        "domain": "google.com",
+        "raw_file": "/home/rayen/viperai/src/viperai/output/curl_google.com.txt",
+        "status": null,
+        "server": null,
+        "headers": {}
+      },
+      "timestamp": "2025-11-18T21:46:55.723860"
+    }
+  ]
+}

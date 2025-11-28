@@ -1,0 +1,25 @@
+{
+  "steps": [
+    {
+      "id": 1,
+      "action": "Enumerate subdomains for google.com to identify potential targets.",
+      "tool_suggestions": [
+        "sublistah",
+        "chaos"
+      ],
+      "chosen_tool": "sublistah",
+      "status": "pending"
+    },
+    {
+      "id": 2,
+      "action": "Fetch HTTP headers and content for each identified subdomain to gather information about server software, versions, and potential vulnerabilities.",
+      "tool_suggestions": [
+        "curl"
+      ],
+      "chosen_tool": "curl",
+      "status": "pending"
+    }
+  ],
+  "target": "google.com",
+  "session_id": "temp"
+}
