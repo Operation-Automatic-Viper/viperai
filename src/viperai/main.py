@@ -6,6 +6,7 @@ from viperai.planner import Planner
 from viperai.reporter import Reporter
 from viperai.executor import Executor
 from viperai.scope import is_valid_target, confirm_authorised
+from viperai.state import new_state, update_state
 
 USAGE = "Usage: viperai scan <target> [--yes] | resume <session.json>"
 
@@ -54,24 +55,34 @@ def main():
 
 
 def run_loop(planner, reporter):
-    executor = Executor()
+    executor = Executor(max_hosts_per_step=planner.config["max_hosts_per_step"])
     target = planner.target
+    state = new_state()
 
     try:
         while True:
             step = planner.get_next_step()
             if not step:
-                print("[ViperAI] Goal achieved!")
+                print("[ViperAI] Plan complete.")
                 break
 
-            print(f"[Step {step['id']}] {step['action']} → {step.get('chosen_tool')}")
+            source = step.get("input", "target")
+            where = "" if source == "target" else f" [on {source}]"
+            print(f"[Step {step['id']}] {step['action']} → {step.get('chosen_tool')}{where}")
 
-            result = executor.run(step, target)
+            result = executor.run(step, target, state)
 
+            update_state(state, step.get("chosen_tool"), result, target)
             reporter.log_step(step, result)
             planner.update_step_status(step["id"], "completed")
-            planner.reflect(result)
-            reporter.save()
+            # Reflection refines only the remaining steps, always within the authorised scope.
+            planner.reflect(state)
+            reporter.record_state(state)
+
+        print(
+            f"[ViperAI] Found {len(state['subdomains'])} subdomain(s), "
+            f"{len(state['live_hosts'])} live host(s), {len(state['findings'])} finding(s)."
+        )
 
     except KeyboardInterrupt:
         print("\n[ViperAI] Saving state...")

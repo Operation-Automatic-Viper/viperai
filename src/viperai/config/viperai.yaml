@@ -1,3 +1,7 @@
 gemini-api:
   model: gemini-2.5-flash
   # The key is read from the GEMINI_API_KEY environment variable, never stored here.
+
+agent:
+  max_steps: 12           # total plan steps, including steps added by reflection
+  max_hosts_per_step: 10  # cap when a step runs on discovered subdomains or live hosts

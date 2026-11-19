@@ -33,9 +33,15 @@ class Reporter:
             "step_id": step["id"],
             "action": step["action"],
             "tool": step.get("chosen_tool"),
+            "input": step.get("input", "target"),
             "result": result,
             "timestamp": datetime.now().isoformat()
         })
+        self.save()
+
+    def record_state(self, state):
+        """Store the agent's accumulated findings on the session."""
+        self.session["state"] = state
         self.save()
 
     def save(self):

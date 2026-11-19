@@ -13,6 +13,15 @@ def is_valid_target(target: str) -> bool:
     return bool(target) and bool(_HOSTNAME.match(target))
 
 
+def in_scope(host: str, target: str) -> bool:
+    """True if `host` is the authorised target or one of its subdomains."""
+    if not isinstance(host, str):
+        return False
+    host = host.strip().lower().rstrip(".")
+    target = target.strip().lower().rstrip(".")
+    return is_valid_target(host) and (host == target or host.endswith("." + target))
+
+
 def confirm_authorised(target: str, assume_yes: bool = False, ask=input) -> bool:
     """Ask the operator to confirm they are allowed to test `target`.
 
