@@ -2,6 +2,7 @@ import json
 import os
 import sys
 from pathlib import Path
+import yaml
 import google.generativeai as genai
 
 class Planner:
@@ -28,6 +29,14 @@ class Planner:
         self.plan_file = self.base_dir /"viperai" / "sessions" / f"viperai_plan_{self.plan.get('session_id', 'temp')}.json"
         self._save_plan()
 
+    def _model_name(self, default="gemini-2.5-flash"):
+        """Gemini model from config/viperai.yaml, falling back to a default."""
+        config_file = self.config_dir / "viperai.yaml"
+        if config_file.exists():
+            config = yaml.safe_load(config_file.read_text()) or {}
+            return config.get("gemini-api", {}).get("model", default)
+        return default
+
     def _generate_plan(self):
         # Load tools.json (using self.tools_file, no hard path)
         if not self.tools_file.exists():
@@ -45,8 +54,8 @@ class Planner:
 You are ViperAI, an autonomous pentester AI.
 Goal: Find outdated or vulnerable software on {self.target}
 Available tools: {json.dumps(tools, indent=2)}
+Only use tool names that appear in the list above; "chosen_tool" must be exactly one of them.
 Return a JSON **object** with this **exact structure**:
-that time use sublistah for enumeration then curl on every subdomain found, nothing else
 ```json
 {{
   "steps": [
@@ -65,7 +74,7 @@ that time use sublistah for enumeration then curl on every subdomain found, noth
   ]
 }}'''
         try:
-            model = genai.GenerativeModel("gemini-2.5-flash")
+            model = genai.GenerativeModel(self._model_name())
             response = model.generate_content(
                 prompt,
                 generation_config=genai.types.GenerationConfig(
@@ -88,7 +97,6 @@ that time use sublistah for enumeration then curl on every subdomain found, noth
                 raw_text += ']}' # Assume array of steps
             if raw_text.count('[') > raw_text.count(']'):
                 raw_text += ']'
-            print(f"[Debug] Raw JSON length: {len(raw_text)} chars") # Remove later
             plan = json.loads(raw_text)
             if not isinstance(plan, dict):
                 raise ValueError("Response is not a JSON object")
@@ -120,4 +128,5 @@ that time use sublistah for enumeration then curl on every subdomain found, noth
                 step["status"] = status
         self._save_plan()
     def reflect(self, result):
-        print("[Reflection] Result received. Plan unchanged for now.")
+        # Planned (Sprint 2): let the model revise the remaining steps based on `result`.
+        print("[Reflection] Not implemented yet; continuing with the original plan.")

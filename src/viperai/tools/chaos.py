@@ -5,7 +5,6 @@ from pathlib import Path
 class ChaosTool(ToolExecutor):
     binary = "chaos"
     def _build_command(self, domain: str, output_path: str) -> list:
-        print("DOMAIN = "+domain)
         return ["chaos", "-d", domain, "-o", output_path]
 
     def _parse_output(self, raw: str, file_path: str) -> dict:

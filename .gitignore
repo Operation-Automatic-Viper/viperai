@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Secrets
+.env
+
+# Run artefacts: scan results and saved sessions stay on your machine
+src/viperai/sessions/
+src/viperai/output/
+amass.txt
+*-subdomains.txt
+*-alive.txt

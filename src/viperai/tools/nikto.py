@@ -18,13 +18,17 @@ class NiktoTool(ToolExecutor):
             tree = ET.parse(file_path)
             root = tree.getroot()
             vulns = []
+            # Nikto XML: <item id="..." osvdbid="..." method="GET"><description/><uri/></item>
             for item in root.findall(".//item"):
                 desc = item.find("description")
-                osvdb = item.find("osvdb")
+                uri = item.find("uri")
+                osvdb = item.get("osvdbid")
                 vulns.append({
-                    "id": item.find("id").text,
-                    "description": desc.text if desc is not None else "",
-                    "osvdb": osvdb.text if osvdb is not None else None
+                    "id": item.get("id"),
+                    "description": (desc.text or "").strip() if desc is not None else "",
+                    "uri": (uri.text or "").strip() if uri is not None else None,
+                    "method": item.get("method"),
+                    "osvdb": osvdb if osvdb not in (None, "", "0") else None,
                 })
             return {
                 "vulnerabilities": vulns,

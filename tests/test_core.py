@@ -1,0 +1,67 @@
+"""Offline tests: no API key, no network, no external tools needed."""
+from viperai.scope import is_valid_target, confirm_authorised
+from viperai.tools.curl import CurlTool
+from viperai.tools.nikto import NiktoTool
+from viperai.tools.sublistah import SublistahTool
+
+
+def test_valid_hostnames():
+    for target in ["example.com", "scanme.nmap.org", "sub.example.co.uk", "a-b.example.com"]:
+        assert is_valid_target(target), target
+
+
+def test_rejects_urls_paths_and_injection():
+    for target in [
+        "", "localhost", "https://example.com", "example.com/admin", "example.com:8080",
+        "-oX.example.com", "example.com; rm -rf /", "../etc/passwd", "exa mple.com",
+    ]:
+        assert not is_valid_target(target), target
+
+
+def test_authorisation_requires_explicit_yes():
+    assert confirm_authorised("example.com", ask=lambda _: "yes")
+    assert confirm_authorised("example.com", ask=lambda _: "  YES ")
+    assert not confirm_authorised("example.com", ask=lambda _: "y")
+    assert not confirm_authorised("example.com", ask=lambda _: "")
+
+
+def test_assume_yes_skips_prompt():
+    def never_called(_):
+        raise AssertionError("prompt should not be shown")
+    assert confirm_authorised("example.com", assume_yes=True, ask=never_called)
+
+
+def test_curl_parses_status_and_headers():
+    raw = "HTTP/2 200\r\nServer: nginx/1.18.0\r\nX-Powered-By: PHP/7.4\r\n"
+    parsed = CurlTool()._parse_output(raw, "")
+    assert parsed["status"] == "200"
+    assert parsed["server"] == "nginx/1.18.0"
+    assert parsed["headers"]["x-powered-by"] == "PHP/7.4"
+
+
+def test_nikto_parses_xml(tmp_path):
+    xml = tmp_path / "nikto.xml"
+    # Same shape as Nikto's -Format xml output: id/osvdbid/method are attributes.
+    xml.write_text(
+        "<niktoscan><scandetails targetip='192.0.2.1' targethostname='example.com'>"
+        "<item id='999986' osvdbid='3233' method='GET'>"
+        "<description><![CDATA[Server leaks inodes via ETags]]></description><uri><![CDATA[/]]></uri></item>"
+        "<item id='999100' osvdbid='0' method='GET'>"
+        "<description><![CDATA[Uncommon header 'x-powered-by' found]]></description><uri><![CDATA[/]]></uri></item>"
+        "</scandetails></niktoscan>"
+    )
+    parsed = NiktoTool()._parse_output("", str(xml))
+    assert "error" not in parsed
+    assert parsed["count"] == 2
+    first, second = parsed["vulnerabilities"]
+    assert first["id"] == "999986" and first["osvdb"] == "3233" and first["uri"] == "/"
+    assert second["osvdb"] is None
+    assert second["description"].startswith("Uncommon header")
+
+
+def test_sublistah_parses_subdomains_and_uses_correct_binary():
+    tool = SublistahTool()
+    assert tool.binary == "sublistah.sh"
+    assert tool._build_command("example.com", "")[0] == "sublistah.sh"
+    parsed = tool._parse_output("# header\nwww.example.com 1.2.3.4\nmail.example.com\n", "")
+    assert parsed["subdomains"] == ["www.example.com", "mail.example.com"]

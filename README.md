@@ -1,222 +1,106 @@
-# ViperAI
-
 <div align="center">
-  <a href="#">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
-  </a>
-
-  <h3 align="center">ViperAI</h3>
-
-  <p align="center">
-    A simple RED TEAMING agent to help you with your pentest!
-    <br />
-    <a href="#"><strong>Explore the docs</strong></a>
-    <br />
-    <br />
-    <a href="https://github.com/">View Demo</a>
-    ·
-    <a href="email:rayenguedria12@gmail.com">Request Feature</a>
-  </p>
+  <img src="images/logo.png" alt="ViperAI logo" width="80" height="80">
+  <h1>ViperAI</h1>
+  <p>A prototype LLM agent that plans and runs reconnaissance and scanning tools for penetration testing.</p>
 </div>
 
+> **Status: early prototype (Sprint 1 of 5).** The planning loop, tool adapters and session
+> resume work. Reflection, CVE lookup and reporting are planned; see [Roadmap](#roadmap).
 
+> **Use only on targets you own or have written permission to test.** ViperAI asks you to
+> confirm authorisation before every scan. Good practice targets: your own lab,
+> [`scanme.nmap.org`](http://scanme.nmap.org/) (explicitly allows scanning), or deliberately
+> vulnerable apps such as DVWA or Hack The Box machines.
 
-<!-- TABLE OF CONTENTS -->
-<details>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
-  </ol>
-</details>
+## How it works
 
+```
+target ──► Planner (Gemini) ──► plan: ordered steps, each with a chosen tool
+                                   │
+              ┌────────────────────┘
+              ▼
+          Executor ──► tool adapters (chaos, sublistah, curl, nikto) via subprocess
+              │
+              ▼
+          Reporter ──► session JSON (saved after every step, resumable)
+```
 
+1. **Planner** (`planner.py`) sends the goal ("find outdated or vulnerable software on the
+   target") and the tool catalogue (`config/tools.json`) to Gemini, which returns a JSON plan.
+2. **Executor** (`executor.py`) runs each step's chosen tool against the target. Each adapter in
+   `tools/` builds the command and parses the output into structured data.
+3. **Reporter** (`reporter.py`) logs every step and result to a session file, so an interrupted
+   run (Ctrl+C) can be resumed.
 
-<!-- ABOUT THE PROJECT -->
-## About The Project
+Commands are run as argument lists (no shell), and the target must be a plain hostname.
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
-
-ViperAI is an autonomous pentester AI agent designed to assist with red teaming and penetration testing. It plans, executes security scans, checks for vulnerabilities, and self-improves through reflection. Built with Scrum methodology, it features a modular architecture for tools like CHAOS, Nikto, and CVE lookup.
-
-Here's why ViperAI is useful:
-* Automates pentesting workflows with self-reasoning (chain-of-thought).
-* Supports resume from crashes and human-in-the-loop approvals for sensitive actions.
-* Focuses on safety: sandboxed tools, no auto-run exploits.
-* Extensible with plugin system for new tools.
-
-This project follows a Scrum roadmap with 5 sprints, starting from core planning to professional reporting.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-### Built With
-
-* [![Python][Python]][Python-url]
-* [![OpenAI][OpenAI]][OpenAI-url]
-* [![Poetry][Poetry]][Poetry-url]
-* [![Subprocess][Subprocess]][Subprocess-url]
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- GETTING STARTED -->
-## Getting Started
-
-To get ViperAI running locally, follow these steps.
+## Getting started
 
 ### Prerequisites
 
-* Python 3.11+
-* Poetry (dependency manager): Install with `curl -sSL https://install.python-poetry.org | python3 -`
-* OpenAI API Key: Sign up at [OpenAI](https://platform.openai.com/account/api-keys)
-* CHAOS tool: Install with `go install -v github.com/projectdiscovery/chaos-client/cmd/chaos@latest`
+- Python 3.11+ and [Poetry](https://python-poetry.org)
+- A Gemini API key, set as `GEMINI_API_KEY`
+- The tools you want the agent to use, on your `PATH`:
+  - [`chaos`](https://github.com/projectdiscovery/chaos-client) (needs a ProjectDiscovery API key, `PDCP_API_KEY`)
+  - [`nikto`](https://github.com/sullo/nikto)
+  - `curl`
+  - `sublistah.sh`: a custom subdomain enumeration script (not yet included in this repo)
 
-### Installation
+Missing tools are reported as errors for that step; the run continues.
 
-1. Clone the repo
-   ```sh
-   git clone https://github.com/your_username/viperai.git
-   ```
-2. Navigate to the project directory
-   ```sh
-   cd viperai
-   ```
-3. Install dependencies with Poetry
-   ```sh
-   poetry install
-   ```
-4. Set your OpenAI API Key
-   ```sh
-   export OPENAI_API_KEY='sk-your-api-key'
-   ```
+### Install
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+```sh
+git clone https://github.com/Operation-Automatic-Viper/viperai.git
+cd viperai
+poetry install
+export GEMINI_API_KEY='your-key'
+```
 
+The Gemini model is set in `src/viperai/config/viperai.yaml` (default `gemini-2.5-flash`).
 
-
-<!-- USAGE EXAMPLES -->
 ## Usage
 
-Run a scan:
 ```sh
-poetry run viperai scan example.com
+# Plan and run a scan (asks you to confirm authorisation first)
+poetry run viperai scan scanme.nmap.org
+
+# Skip the prompt once you have confirmed authorisation, e.g. in scripts
+poetry run viperai scan scanme.nmap.org --yes
+
+# Resume an interrupted run
+poetry run viperai resume src/viperai/sessions/viperai_session_<id>.json
 ```
 
-Resume a session:
+Sessions and raw tool output are written to `src/viperai/sessions/` and `src/viperai/output/`
+(both git-ignored).
+
+## Tests
+
 ```sh
-poetry run viperai resume sessions/viperai_session_20251109.json
+pip install pytest
+PYTHONPATH=src python -m pytest
 ```
 
-For more details, see the [Documentation](https://example.com).
+The tests cover target validation, the authorisation check and the tool output parsers. They
+need no API key and no network access.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- ROADMAP -->
 ## Roadmap
 
-- [x] Sprint 1: Core planning, CHAOS tool, resume
-- [ ] Sprint 2: Nikto adapter, reflection loop
-- [ ] Sprint 3: Multi-source fingerprinting (Wappalyzer, TLS, crt.sh)
-- [ ] Sprint 4: CVE lookup, risk scoring, /approve gate
-- [ ] Sprint 5: Reporting (PDF), unit tests
+- [x] **Sprint 1:** LLM planning, tool adapters (chaos, sublistah, curl, nikto), session resume
+- [ ] **Sprint 2:** Reflection loop (revise remaining steps from each result) and chaining outputs between steps, e.g. scanning each discovered subdomain
+- [ ] **Sprint 3:** Fingerprinting from more sources (Wappalyzer, TLS, crt.sh)
+- [ ] **Sprint 4:** CVE lookup, risk scoring, approval gate before intrusive steps
+- [ ] **Sprint 5:** PDF reporting, fuller test suite
 
-See the [open issues](https://github.com/issues) for a full list of proposed features (and known issues).
+**Known issue:** the planner uses the `google-generativeai` SDK, which Google has deprecated;
+migrating to `google-genai` is planned.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+## Authors
 
+- Rayen Guedria ([rayenguedria.github.io](https://rayenguedria.github.io))
+- Oussama
 
-
-<!-- CONTRIBUTING -->
-## Contributing
-
-Contributions are welcome! To contribute:
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- LICENSE -->
 ## License
 
-Distributed under the MIT License. See `LICENSE.txt` for more information.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- CONTACT -->
-## Contact
-
-Rayen Guedria - [@your_twitter](https://twitter.com/your_username) - rayenguedria12@gmail.com
-
-Oussama - oussama@example.com
-
-Project Link: [https://github.com/your_username/viperai](https://github.com/your_username/viperai)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- ACKNOWLEDGMENTS -->
-## Acknowledgments
-
-* [OpenAI API](https://openai.com)
-* [ProjectDiscovery (CHAOS)](https://github.com/projectdiscovery/chaos-client)
-* [Poetry](https://python-poetry.org)
-* [Best README Template](https://github.com/othneildrew/Best-README-Template)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/othneildrew/Best-README-Template.svg?style=for-the-badge
-[contributors-url]: https://github.com/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/othneildrew/Best-README-Template.svg?style=for-the-badge
-[forks-url]: https://github.com/network/members
-[stars-shield]: https://img.shields.io/github/stars/othneildrew/Best-README-Template.svg?style=for-the-badge
-[stars-url]: https://github.com/stargazers
-[issues-shield]: https://img.shields.io/github/issues/othneildrew/Best-README-Template.svg?style=for-the-badge
-[issues-url]: https://github.com/issues
-[license-shield]: https://img.shields.io/github/license/othneildrew/Best-README-Template.svg?style=for-the-badge
-[license-url]: https://github.com/blob/master/LICENSE.txt
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/othneildrew
-[product-screenshot]: images/screenshot.png
-[Python]: https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54
-[Python-url]: https://www.python.org/
-[OpenAI]: https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white
-[OpenAI-url]: https://openai.com/
-[Poetry]: https://img.shields.io/badge/Poetry-60A5FA?style=for-the-badge&logo=poetry&logoColor=white
-[Poetry-url]: https://python-poetry.org/
-[Subprocess]: https://img.shields.io/badge/Subprocess-000000?style=for-the-badge&logo=python&logoColor=white
-[Subprocess-url]: https://docs.python.org/3/library/subprocess.html
+MIT, see [LICENSE](LICENSE).

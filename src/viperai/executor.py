@@ -11,14 +11,12 @@ class Executor:
             "curl": CurlTool(),
             "nikto": NiktoTool(),
             "sublistah": SublistahTool(),
-            # Add more later
         }
-# src/viperai/executor.py
-    def run(self, step, target):  # ← ADD target
-        tool_name = step.get("chosen_tool")
-        domain = target  # ← USE target from planner
 
-        print(f"[DEBUG] domain is: {domain}")  # Your debug
+    def run(self, step, target):
+        """Run the step's chosen tool against the scan target."""
+        tool_name = step.get("chosen_tool")
+        domain = target
 
         if not tool_name or not domain:
             return {"success": False, "error": "Missing tool or domain"}

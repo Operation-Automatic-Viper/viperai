@@ -2,11 +2,11 @@
 from .base import ToolExecutor
 
 class SublistahTool(ToolExecutor):
-    binary = "sublistahh.sh"   # ← your tool name
+    binary = "sublistah.sh"   # custom enumeration script, must be on PATH
 
     def _build_command(self, domain: str, output_path: str) -> list:
-        # sublistah.sh usually outputs to stdout
-        return ["sublistah.sh", domain]
+        # sublistah.sh writes its results to stdout
+        return [self.binary, domain]
 
     def _parse_output(self, raw: str, file_path: str) -> dict:
         lines = [line.strip() for line in raw.splitlines() if line.strip() and not line.startswith("#")]
