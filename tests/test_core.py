@@ -2,7 +2,8 @@
 from viperai.scope import is_valid_target, confirm_authorised
 from viperai.tools.curl import CurlTool
 from viperai.tools.nikto import NiktoTool
-from viperai.tools.sublistah import SublistahTool
+from viperai.tools.amass import AmassTool
+from viperai.tools.httpx import HttpxTool
 
 
 def test_valid_hostnames():
@@ -59,9 +60,22 @@ def test_nikto_parses_xml(tmp_path):
     assert second["description"].startswith("Uncommon header")
 
 
-def test_sublistah_parses_subdomains_and_uses_correct_binary():
-    tool = SublistahTool()
-    assert tool.binary == "sublistah.sh"
-    assert tool._build_command("example.com", "")[0] == "sublistah.sh"
-    parsed = tool._parse_output("# header\nwww.example.com 1.2.3.4\nmail.example.com\n", "")
+def test_amass_parses_subdomains_from_file(tmp_path):
+    out = tmp_path / "amass.txt"
+    out.write_text("www.example.com\nmail.example.com\nnot a host line\n")
+    tool = AmassTool()
+    assert tool.binary == "amass"
+    assert tool._build_command("example.com", str(out))[:2] == ["amass", "enum"]
+    parsed = tool._parse_output("", str(out))
     assert parsed["subdomains"] == ["www.example.com", "mail.example.com"]
+    assert parsed["count"] == 2
+
+
+def test_httpx_parses_status_and_url():
+    tool = HttpxTool()
+    assert tool.binary == "httpx"
+    assert tool._build_command("example.com", "")[:2] == ["httpx", "-u"]
+    parsed = tool._parse_output("https://example.com [200]\n", "")
+    assert parsed["status"] == "200"
+    assert parsed["url"] == "https://example.com"
+    assert tool._parse_output("", "")["status"] is None

@@ -18,7 +18,7 @@
 target ──► Planner (Gemini) ──► plan: ordered steps, each with a tool and an input
               ▲                    │
               │ reflect            ▼
-              │              Executor ──► tool adapters (chaos, sublistah, curl, nikto)
+              │              Executor ──► tool adapters (amass, chaos, httpx, curl, nikto)
               │                    │
             State ◄────────────────┘   subdomains / live hosts / findings
               │
@@ -50,10 +50,12 @@ plain hostname.
 - Python 3.11+ and [Poetry](https://python-poetry.org)
 - A Gemini API key, set as `GEMINI_API_KEY`
 - The tools you want the agent to use, on your `PATH`:
+  - [`amass`](https://github.com/owasp-amass/amass) — passive subdomain enumeration
   - [`chaos`](https://github.com/projectdiscovery/chaos-client) (needs a ProjectDiscovery API key, `PDCP_API_KEY`)
-  - [`nikto`](https://github.com/sullo/nikto)
+  - [`httpx`](https://github.com/projectdiscovery/httpx) — live-host probing
+  - [`nikto`](https://github.com/sullo/nikto) — vulnerability scan. Its XML output needs the Perl
+    module `XML::Writer` (`cpan XML::Writer`, or e.g. `pacman -S perl-xml-writer` / `apt install libxml-writer-perl`)
   - `curl`
-  - `sublistah.sh`: a custom subdomain enumeration script (not yet included in this repo)
 
 Missing tools are reported as errors for that step; the run continues.
 
@@ -66,7 +68,9 @@ poetry install
 export GEMINI_API_KEY='your-key'
 ```
 
-The Gemini model is set in `src/viperai/config/viperai.yaml` (default `gemini-2.5-flash`).
+The Gemini model is set in `src/viperai/config/viperai.yaml` (default `gemini-3.8-flash`).
+On a free-tier key the API rate-limits (a few requests per minute), which can throttle or
+interrupt a run; a billed key avoids this.
 
 ## Usage
 
@@ -96,7 +100,7 @@ need no API key and no network access.
 
 ## Roadmap
 
-- [x] **Sprint 1:** LLM planning, tool adapters (chaos, sublistah, curl, nikto), session resume
+- [x] **Sprint 1:** LLM planning, tool adapters (amass, chaos, httpx, curl, nikto), session resume
 - [x] **Sprint 2:** Reflection loop (revise remaining steps from each result) and output chaining — subdomains feed curl, live hosts feed the vulnerability scan — with scope and step/host caps
 - [ ] **Sprint 3:** Fingerprinting from more sources (Wappalyzer, TLS, crt.sh)
 - [ ] **Sprint 4:** CVE lookup, risk scoring, approval gate before intrusive steps

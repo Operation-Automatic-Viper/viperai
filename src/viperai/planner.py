@@ -123,8 +123,10 @@ Return ONLY a JSON object:
             steps = self._validate_steps(plan.get("steps", []))
             if not steps:
                 raise ValueError("Model returned no usable steps")
-        except (json.JSONDecodeError, ValueError, KeyError) as e:
-            print(f"[Error] Could not build a plan from the model: {e}")
+        except SystemExit:
+            raise
+        except Exception as e:
+            print(f"[Error] Could not build a plan from the model: {type(e).__name__}: {e}")
             sys.exit(1)
         return {"target": self.target, "session_id": "temp", "steps": steps}
 
@@ -174,7 +176,12 @@ Return ONLY a JSON object: {{"steps": [{{"action": "...", "chosen_tool": "<tool>
         try:
             revised = self._parse_json(self.llm(self._reflect_prompt(state, remaining)))
             steps = self._validate_steps(revised.get("steps", []), start_id=len(done) + 1)
+            # Drop steps that repeat work already completed (same tool + input).
+            done_sigs = {(s["chosen_tool"], s["input"]) for s in done}
+            steps = [s for s in steps if (s["chosen_tool"], s["input"]) not in done_sigs]
             steps = steps[:budget]
+            for i, s in enumerate(steps):
+                s["id"] = len(done) + 1 + i
             if steps:
                 self.plan["steps"] = done + steps
                 print(f"[Reflection] Revised remaining steps ({len(steps)} planned).")

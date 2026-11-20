@@ -4,11 +4,11 @@ import json
 
 from viperai.scope import in_scope
 
-SUBDOMAIN_TOOLS = {"chaos", "sublistah"}
+SUBDOMAIN_TOOLS = {"amass", "chaos"}
 
 
 def new_state() -> dict:
-    return {"subdomains": [], "live_hosts": [], "findings": []}
+    return {"subdomains": [], "live_hosts": [], "findings": [], "schemes": {}}
 
 
 def _per_host(result: dict, default_host: str) -> list:
@@ -32,9 +32,11 @@ def update_state(state: dict, tool: str, result: dict, target: str) -> dict:
         if tool in SUBDOMAIN_TOOLS:
             subs = [s.strip().lower().rstrip(".") for s in res.get("subdomains", [])]
             _add_unique(state["subdomains"], [s for s in subs if in_scope(s, target)])
-        elif tool == "curl":
+        elif tool in ("curl", "httpx"):
             if res.get("status") and in_scope(host, target):
                 _add_unique(state["live_hosts"], [host])
+                if res.get("scheme"):
+                    state.setdefault("schemes", {})[host] = res["scheme"]
         elif tool == "nikto":
             _add_unique(state["findings"], [
                 {"host": host, "id": v.get("id"), "description": v.get("description"), "uri": v.get("uri")}

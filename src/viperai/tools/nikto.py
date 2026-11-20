@@ -1,24 +1,34 @@
 # src/viperai/tools/nikto.py
-from .base import ToolExecutor
 import xml.etree.ElementTree as ET
-from pathlib import Path
+from .base import ToolExecutor
+
 
 class NiktoTool(ToolExecutor):
     binary = "nikto"
 
+    @staticmethod
+    def _xml_path(path: str) -> str:
+        """nikto -Format xml writes to a .xml file; keep write and read paths in sync."""
+        if path.endswith(".xml"):
+            return path
+        if path.endswith(".txt"):
+            return path[:-4] + ".xml"
+        return path + ".xml"
+
     def _build_command(self, domain: str, output_path: str) -> list:
+        # `domain` may already carry the scheme the prober found; only default it if not.
+        host = domain if "://" in domain else f"https://{domain}"
         return [
-            "nikto", "-host", f"https://{domain}",
-            "-output", output_path,
-            "-Format", "xml"
+            "nikto", "-host", host,
+            "-output", self._xml_path(output_path),
+            "-Format", "xml",
         ]
 
     def _parse_output(self, raw: str, file_path: str) -> dict:
         try:
-            tree = ET.parse(file_path)
+            tree = ET.parse(self._xml_path(file_path))
             root = tree.getroot()
             vulns = []
-            # Nikto XML: <item id="..." osvdbid="..." method="GET"><description/><uri/></item>
             for item in root.findall(".//item"):
                 desc = item.find("description")
                 uri = item.find("uri")
@@ -30,9 +40,6 @@ class NiktoTool(ToolExecutor):
                     "method": item.get("method"),
                     "osvdb": osvdb if osvdb not in (None, "", "0") else None,
                 })
-            return {
-                "vulnerabilities": vulns,
-                "count": len(vulns)
-            }
+            return {"vulnerabilities": vulns, "count": len(vulns)}
         except Exception as e:
             return {"vulnerabilities": [], "count": 0, "error": str(e)}

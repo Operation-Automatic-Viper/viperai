@@ -1,15 +1,44 @@
 # src/viperai/tools/curl.py
+import subprocess
 from .base import ToolExecutor
 
+
 class CurlTool(ToolExecutor):
+    """HTTP(S) prober: tries https then http so http-only hosts are not missed."""
     binary = "curl"
 
-    def _build_command(self, domain: str, output_path: str) -> list:
+    def _build_command(self, url: str, output_path: str) -> list:
         return [
             "curl", "-I", "-L", "--max-time", "10",
             "--silent", "--show-error",
-            f"https://{domain}"
+            url,
         ]
+
+    def run(self, domain: str) -> dict:
+        if not domain:
+            return {"success": False, "error": "No domain provided"}
+        if not self._check_binary():
+            return {"success": False, "error": f"{self.binary} not in PATH"}
+
+        # If a scheme was already supplied, honour it; otherwise probe https then http.
+        schemes = [domain.split("://", 1)[0]] if "://" in domain else ["https", "http"]
+        host = domain.split("://", 1)[-1]
+        last_error = None
+        for scheme in schemes:
+            url = f"{scheme}://{host}"
+            try:
+                parsed = self._parse_output(self._run_command(self._build_command(url, "")), "")
+            except subprocess.TimeoutExpired:
+                last_error = f"Timeout after {self.timeout}s"
+                continue
+            except Exception as e:
+                last_error = str(e)
+                continue
+            if parsed.get("status"):
+                parsed["scheme"] = scheme
+                return {"success": True, "tool": "curl", "domain": host, **parsed}
+        return {"success": False, "tool": "curl", "domain": host,
+                "error": last_error or "no response on https/http"}
 
     def _parse_output(self, raw: str, file_path: str) -> dict:
         headers = {}
@@ -27,5 +56,5 @@ class CurlTool(ToolExecutor):
         return {
             "status": headers.get("status"),
             "server": headers.get("server"),
-            "headers": headers
+            "headers": headers,
         }

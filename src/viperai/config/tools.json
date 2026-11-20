@@ -1,5 +1,5 @@
 {
-  "subdomain_enum": ["chaos", "sublistah"],
-  "headers": ["curl"],
+  "subdomain_enum": ["amass", "chaos"],
+  "probe": ["httpx", "curl"],
   "vuln_scan": ["nikto"]
 }

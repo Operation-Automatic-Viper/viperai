@@ -1,4 +1,5 @@
 # src/viperai/tools/base.py
+import re
 import subprocess
 from pathlib import Path
 from typing import Dict, Any
@@ -21,14 +22,17 @@ class ToolExecutor:
         if not self._check_binary():
             return {"success": False, "error": f"{self.binary} not in PATH"}
 
-        output_file = self.output_dir / f"{self.binary}_{domain}.txt"
+        safe = re.sub(r"[^A-Za-z0-9._-]", "_", domain)
+        output_file = self.output_dir / f"{self.binary}_{safe}.txt"
         cmd = self._build_command(domain, str(output_file))
 
         try:
             raw = self._run_command(cmd)
             parsed = self._parse_output(raw, str(output_file))
             return {
-                "success": True,
+                # A parser that set an "error" (e.g. missing output file) is a failure,
+                # not a 0-result success.
+                "success": "error" not in parsed,
                 "tool": self.binary,
                 "domain": domain,
                 "raw_file": str(output_file),

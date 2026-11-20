@@ -1,5 +1,5 @@
 gemini-api:
-  model: gemini-2.5-flash
+  model: gemini-3.8-flash
   # The key is read from the GEMINI_API_KEY environment variable, never stored here.
 
 agent:
